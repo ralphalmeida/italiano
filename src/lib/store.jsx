@@ -5,7 +5,7 @@ import { lessons, readings } from '../data/index.js';
 import { sfx } from './sfx.js';
 
 const Ctx = createContext(null);
-const ctxInfo = { totalLessons: lessons.length, totalReadings: readings.length };
+const ctxInfo = { coreLessons: lessons.filter((l) => !l.review).map((l) => l.id), totalReadings: readings.length };
 
 const localKey = (email) => `italiano:progress:${email}`;
 

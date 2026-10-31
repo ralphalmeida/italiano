@@ -21,7 +21,7 @@ export default {
         { type: 'tip', text: 'Dica ou armadilha comum para brasileiros (falsos amigos etc.).' },
       ],
       vocab: [ ['il cognome', 'o sobrenome'], ... ],   // 8–12 pares [italiano, português]; substantivos COM artigo
-      exercises: [              // 8–10, misture os tipos
+      exercises: [              // 18–20, misture os tipos (o app sorteia 12 por rodada)
         { type: 'mc', prompt: 'Como se diz "boa noite" ao chegar num lugar?', options: ['Buonasera', 'Buonanotte', 'Buongiorno', 'Arrivederci'], answer: 0, explain: 'Buonanotte é só ao ir dormir.' },
         { type: 'fill', prompt: 'Io ___ brasiliano.', hint: 'essere', answer: ['sono'], explain: 'io sono' },
         { type: 'order', pt: 'Eu me chamo Ana.', answer: 'Io mi chiamo Ana', extra: ['ti', 'sono'] },
@@ -33,6 +33,9 @@ export default {
 ```
 
 Regras de exercício:
+- Cada lição tem **18–20 exercícios** (o app sorteia 12 a cada vez que a lição é feita, então eles precisam
+  ser independentes entre si). Distribuição sugerida: ~6 mc, ~5 fill, ~4 order, ~4 translate.
+- Não repita a mesma frase/pergunta em dois exercícios da mesma lição.
 - `mc`: 4 opções, `answer` = índice da correta. Varie a posição da correta.
 - `fill`: exatamente um `___` no prompt. `answer` = lista de respostas aceitas (minúsculas).
 - `order`: `answer` é a frase italiana sem pontuação final; as palavras são os blocos (separados por espaço). `extra` = 1–3 palavras distratoras. `alt` (opcional) = outras ordens/formas também corretas.

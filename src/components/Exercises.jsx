@@ -11,19 +11,33 @@ export const TYPE_LABEL = {
   match: 'Ligue os pares',
 };
 
-// Gera exercícios de vocabulário a partir da lista da lição.
+const ROUND = 12; // exercícios da lição sorteados por rodada (revisão: 15)
+
+// Sorteia exercícios equilibrando os tipos (mc, fill, order, translate).
+function sample(pool, n) {
+  const groups = {};
+  for (const ex of shuffle(pool)) (groups[ex.type] ||= []).push(ex);
+  const lists = shuffle(Object.values(groups));
+  const out = [];
+  while (out.length < n && lists.some((l) => l.length)) for (const l of lists) if (l.length && out.length < n) out.push(l.pop());
+  return out;
+}
+
+// Monta a rodada: pares de vocabulário + exercícios sorteados do banco da lição.
 export function buildSession(lesson) {
-  const vocab = lesson.vocab || [];
+  // sem pares repetidos/ambíguos (a revisão junta o vocabulário de várias lições)
+  const seen = new Set();
+  const vocab = (lesson.vocab || []).filter(([it, pt]) => it !== pt && !seen.has(it) && !seen.has(pt) && seen.add(it) && seen.add(pt));
   const extra = [];
   if (vocab.length >= 4) {
     extra.push({ type: 'match', pairs: shuffle(vocab).slice(0, 5) });
     for (const [it, pt] of shuffle(vocab).slice(0, 2)) {
-      const wrong = shuffle(vocab.filter((v) => v[0] !== it)).slice(0, 3).map((v) => v[1]);
+      const wrong = shuffle(vocab.filter((v) => v[0] !== it && v[1] !== pt)).slice(0, 3).map((v) => v[1]);
       const options = shuffle([pt, ...wrong]);
       extra.push({ type: 'vocab', prompt: it, options, answer: options.indexOf(pt), explain: `${it} = ${pt}` });
     }
   }
-  const own = lesson.exercises.map((ex) => {
+  const own = sample(lesson.exercises, lesson.review ? ROUND + 3 : ROUND).map((ex) => {
     if (ex.type !== 'mc') return ex;
     const options = shuffle(ex.options);
     return { ...ex, options, answer: options.indexOf(ex.options[ex.answer]) };

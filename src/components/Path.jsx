@@ -5,12 +5,13 @@ import { isUnlocked } from '../lib/progress.js';
 export function Path({ onOpen }) {
   const { progress } = useProgress();
   const order = lessons;
-  const nextIndex = order.findIndex((l) => !progress.lessons[l.id]);
+  const nextIndex = order.findIndex((l) => !l.review && !progress.lessons[l.id]);
 
   return (
     <div className="path">
       {units.map((u, ui) => {
-        const done = u.lessons.filter((l) => progress.lessons[l.id]).length;
+        const core = u.lessons.filter((l) => !l.review);
+        const done = core.filter((l) => progress.lessons[l.id]).length;
         return (
           <section key={u.id} className={`unit unit-c${ui % 6}`}>
             <header className="unit-head">
@@ -19,7 +20,7 @@ export function Path({ onOpen }) {
                 <h2>{u.emoji} {u.title}</h2>
                 <p>{u.subtitle}</p>
               </div>
-              <div className="unit-count">{done}/{u.lessons.length}</div>
+              <div className="unit-count">{done}/{core.length}</div>
             </header>
             <div className="nodes">
               {u.lessons.map((l) => {
@@ -32,12 +33,12 @@ export function Path({ onOpen }) {
                   <div key={l.id} className="node-wrap" style={{ transform: `translateX(${offset * 52}px)` }}>
                     {current && <div className="node-start">COMEÇAR</div>}
                     <button
-                      className={`node ${rec ? 'done' : ''} ${current ? 'current' : ''} ${unlocked ? '' : 'locked'}`}
+                      className={`node ${l.review ? 'review' : ''} ${rec ? 'done' : ''} ${current ? 'current' : ''} ${unlocked ? '' : 'locked'}`}
                       disabled={!unlocked}
                       onClick={() => onOpen(l.id)}
                       aria-label={l.title}
                     >
-                      {rec ? '✓' : unlocked ? '★' : '🔒'}
+                      {!unlocked ? '🔒' : l.review ? '🏆' : rec ? '✓' : '★'}
                     </button>
                     <div className="node-label">
                       {l.title}
@@ -50,7 +51,7 @@ export function Path({ onOpen }) {
           </section>
         );
       })}
-      <p className="muted center small">Mais unidades em breve. Use “Revisão” e “Leitura” todos os dias!</p>
+      <p className="muted center small">Use “Revisão” e “Leitura” todos os dias — e refaça lições: os exercícios mudam a cada vez!</p>
     </div>
   );
 }

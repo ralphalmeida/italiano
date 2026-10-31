@@ -17,6 +17,8 @@ export function Profile({ onLogout }) {
   const days = lastDays(7);
   const max = Math.max(progress.settings.dailyGoal, ...days.map((d) => progress.daily[d.key] || 0));
   const stars = Object.values(progress.lessons).reduce((s, l) => s + l.stars, 0);
+  const core = lessons.filter((l) => !l.review);
+  const coreDone = core.filter((l) => progress.lessons[l.id]).length;
   const setSetting = (k, v) => update((p) => ({ ...p, settings: { ...p.settings, [k]: v } }));
 
   return (
@@ -34,7 +36,7 @@ export function Profile({ onLogout }) {
       <div className="grid-stats">
         <div className="card stat-card"><b>🔥 {currentStreak(progress)}</b><span>dias seguidos</span><small>recorde {progress.streak.best || 0}</small></div>
         <div className="card stat-card"><b>⚡ {progress.xp}</b><span>XP total</span></div>
-        <div className="card stat-card"><b>📘 {Object.keys(progress.lessons).length}/{lessons.length}</b><span>lições</span><small>{stars} ★</small></div>
+        <div className="card stat-card"><b>📘 {coreDone}/{core.length}</b><span>lições</span><small>{stars} ★</small></div>
         <div className="card stat-card"><b>🎓 {masteredCount(progress)}</b><span>palavras dominadas</span><small>{Object.keys(progress.srs).length} no total</small></div>
       </div>
 

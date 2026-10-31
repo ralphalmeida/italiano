@@ -139,6 +139,7 @@ h3 { font-size: 17px; }
 .node { width: 74px; height: 70px; border-radius: 50%; border: 0; background: var(--u); color: #fff; font-size: 30px; font-weight: 900; box-shadow: 0 7px 0 var(--u-d); transition: transform 0.08s; }
 .node:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 2px 0 var(--u-d); }
 .node.done { background: var(--gold); box-shadow: 0 7px 0 #c48f00; }
+.node.review:not(.locked) { border-radius: 22px; width: 84px; }
 .node.locked { background: var(--line); box-shadow: 0 7px 0 color-mix(in srgb, var(--line) 70%, #000); font-size: 22px; }
 .node.current { animation: bob 1.6s ease-in-out infinite; outline: 6px solid color-mix(in srgb, var(--u) 25%, transparent); outline-offset: 4px; }
 .node-label { margin-top: 12px; font-weight: 800; font-size: 14px; line-height: 1.25; }

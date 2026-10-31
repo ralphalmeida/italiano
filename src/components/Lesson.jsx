@@ -43,10 +43,10 @@ export function LessonIntro({ lesson, unit, onStart, onBack }) {
         <div className="topbar-title">{unit.emoji} {unit.title}</div>
       </header>
       <article className="card theory">
-        <span className="eyebrow">Lição</span>
+        <span className="eyebrow">{lesson.review ? 'Revisão da unidade' : 'Lição'}</span>
         <h1>{lesson.title}</h1>
         <Theory blocks={lesson.theory} />
-        {lesson.vocab?.length > 0 && (
+        {!lesson.review && lesson.vocab?.length > 0 && (
           <>
             <h2>Vocabulário</h2>
             <ul className="vocab-list">

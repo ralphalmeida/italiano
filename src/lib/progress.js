@@ -134,16 +134,20 @@ export function completeLesson(p, lesson, accuracy) {
   return addCards(next, lesson.vocab, lesson.id);
 }
 
+// Libera a lição se ela já foi feita ou se a lição anterior (ignorando as revisões, que são opcionais) foi concluída.
 export function isUnlocked(p, lessonsInOrder, index) {
-  if (index === 0 || p.settings.unlockAll) return true;
-  return Boolean(p.lessons[lessonsInOrder[index - 1].id]);
+  if (index === 0 || p.settings.unlockAll || p.lessons[lessonsInOrder[index].id]) return true;
+  let i = index - 1;
+  while (i > 0 && lessonsInOrder[i].review) i--;
+  return Boolean(p.lessons[lessonsInOrder[i].id]);
 }
 
 // ---------- Conquistas ----------
 export const ACHIEVEMENTS = [
   { id: 'first', icon: '🌱', name: 'Primo passo', desc: 'Conclua sua primeira lição', test: (p) => Object.keys(p.lessons).length >= 1 },
   { id: 'five', icon: '📚', name: 'Studente', desc: 'Conclua 5 lições', test: (p) => Object.keys(p.lessons).length >= 5 },
-  { id: 'all', icon: '🏛️', name: 'Pronto per la prova', desc: 'Conclua todas as lições', test: (p, ctx) => Object.keys(p.lessons).length >= ctx.totalLessons },
+  { id: 'all', icon: '🏛️', name: 'Pronto per la prova', desc: 'Conclua todas as lições', test: (p, ctx) => ctx.coreLessons.every((id) => p.lessons[id]) },
+  { id: 'review', icon: '🏆', name: 'Ripasso', desc: 'Conclua uma revisão de unidade', test: (p) => Object.keys(p.lessons).some((id) => id.endsWith('rev')) },
   { id: 'perfect', icon: '💯', name: 'Perfetto!', desc: 'Faça uma lição sem errar', test: (p) => p.perfect >= 1 },
   { id: 'stars', icon: '⭐', name: 'Collezionista', desc: 'Junte 30 estrelas', test: (p) => Object.values(p.lessons).reduce((s, l) => s + l.stars, 0) >= 30 },
   { id: 's3', icon: '🔥', name: 'Tre giorni', desc: 'Sequência de 3 dias', test: (p) => (p.streak.best || 0) >= 3 },
