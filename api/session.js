@@ -1,4 +1,4 @@
-import { checkLogin, clearCookie, createCookie, credentials, getSession, json } from './_lib/auth.js';
+import { checkLogin, clearCookie, createCookie, getSession, json } from './_lib/auth.js';
 
 export async function GET(request) {
   const session = getSession(request);
@@ -7,8 +7,8 @@ export async function GET(request) {
 
 export async function POST(request) {
   const { email, password } = await request.json().catch(() => ({}));
-  if (!checkLogin(email, password)) return json({ error: 'E-mail ou senha incorretos.' }, 401);
-  const user = credentials().email;
+  const user = checkLogin(email, password);
+  if (!user) return json({ error: 'E-mail ou senha incorretos.' }, 401);
   return json({ email: user }, 200, { 'set-cookie': createCookie(user) });
 }
 

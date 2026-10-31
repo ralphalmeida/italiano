@@ -6,7 +6,7 @@ App para estudar italiano rumo à prova de cidadania (nível B1 — CILS, CELI o
 - **Gamificação**: XP, níveis, sequência de dias, meta diária, combos, estrelas por lição e conquistas.
 - **Revisão espaçada**: o vocabulário de cada lição concluída vira flashcard (sistema Leitner).
 - **Leitura**: 8 textos no formato da prova com perguntas de compreensão.
-- **Login fixo** (e-mail e senha definidos por variável de ambiente) e **progresso sincronizado** entre aparelhos via Upstash Redis.
+- **Login fixo** (usuários e senhas definidos por variável de ambiente) e **progresso sincronizado** entre aparelhos via Upstash Redis.
 
 ## Rodar localmente
 
@@ -20,7 +20,8 @@ Sem Redis configurado, em dev o progresso fica na memória do servidor + no nave
 
 ## Deploy na Vercel
 
-1. Variáveis de ambiente do projeto (Settings → Environment Variables): `APP_EMAIL`, `APP_PASSWORD`, `SESSION_SECRET`.
+1. Variáveis de ambiente do projeto (Settings → Environment Variables): `APP_EMAIL`, `APP_PASSWORD`, `SESSION_SECRET`
+   e, para mais pessoas, `APP_USERS` (`email:senha;email:senha`). Cada usuário tem o próprio progresso.
    Sem elas, o login fica bloqueado em produção.
 2. Banco: Storage → **Upstash for Redis** (plano grátis) → conectar ao projeto. Isso cria `KV_REST_API_URL` e `KV_REST_API_TOKEN`.
    Sem o banco, o progresso fica salvo só no navegador.

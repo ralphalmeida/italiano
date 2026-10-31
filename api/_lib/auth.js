@@ -21,16 +21,25 @@ function safeEqual(a, b) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export function credentials() {
+// Usuário principal (APP_EMAIL/APP_PASSWORD) + extras em APP_USERS no formato "email:senha;email:senha".
+export function users() {
+  if (!secret()) return [];
+  const list = [];
   const email = process.env.APP_EMAIL || (isDeployed ? '' : 'demo@italiano.app');
   const password = process.env.APP_PASSWORD || (isDeployed ? '' : 'ciao1234');
-  return { email: email.trim().toLowerCase(), password, configured: Boolean(email && password && secret()) };
+  if (email && password) list.push({ email, password });
+  for (const entry of (process.env.APP_USERS || '').split(';')) {
+    const i = entry.indexOf(':');
+    if (i > 0) list.push({ email: entry.slice(0, i), password: entry.slice(i + 1) });
+  }
+  return list.map((u) => ({ email: u.email.trim().toLowerCase(), password: u.password }));
 }
 
+// Retorna o e-mail do usuário se a senha confere; senão null.
 export function checkLogin(email, password) {
-  const c = credentials();
-  if (!c.configured) return false;
-  return safeEqual(String(email || '').trim().toLowerCase(), c.email) && safeEqual(password || '', c.password);
+  const given = String(email || '').trim().toLowerCase();
+  const user = users().find((u) => safeEqual(given, u.email));
+  return user && safeEqual(password || '', user.password) ? user.email : null;
 }
 
 export function createCookie(email) {
@@ -46,12 +55,12 @@ export function clearCookie() {
 export function getSession(request) {
   const raw = request.headers.get('cookie') || '';
   const match = raw.split(/;\s*/).find((c) => c.startsWith(`${COOKIE}=`));
-  if (!match || !credentials().configured) return null;
+  if (!match || !secret()) return null;
   const [payload, sig] = match.slice(COOKIE.length + 1).split('.');
   if (!payload || !sig || !safeEqual(sig, sign(payload))) return null;
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    if (data.exp < Date.now() || data.email !== credentials().email) return null;
+    if (data.exp < Date.now() || !users().some((u) => u.email === data.email)) return null;
     return data;
   } catch {
     return null;
