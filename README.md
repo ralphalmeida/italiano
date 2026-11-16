@@ -4,6 +4,7 @@ App para estudar italiano rumo à prova de cidadania (nível B1 — CILS, CELI o
 
 - **Trilha** com 11 unidades / 22 lições: teoria em português + exercícios (múltipla escolha, completar, montar frase, traduzir, ligar pares).
 - **Gamificação**: XP, níveis, sequência de dias, meta diária, combos, estrelas por lição e conquistas.
+- **Meta diária em minutos** com sequência de dias e lembrete por notificação (no iPhone, com o app na Tela de Início).
 - **Revisão espaçada**: o vocabulário de cada lição concluída vira flashcard (sistema Leitner).
 - **Leitura**: 8 textos no formato da prova com perguntas de compreensão.
 - **Login fixo** (usuários e senhas definidos por variável de ambiente) e **progresso sincronizado** entre aparelhos via Upstash Redis.
@@ -25,7 +26,10 @@ Sem Redis configurado, em dev o progresso fica na memória do servidor + no nave
    Sem elas, o login fica bloqueado em produção.
 2. Banco: Storage → **Upstash for Redis** (plano grátis) → conectar ao projeto. Isso cria `KV_REST_API_URL` e `KV_REST_API_TOKEN`.
    Sem o banco, o progresso fica salvo só no navegador.
-3. Faça um novo deploy.
+3. Lembretes: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `CRON_SECRET` na Vercel, e o mesmo `CRON_SECRET`
+   como secret do repositório no GitHub (o workflow `.github/workflows/remind.yml` chama `/api/remind` de hora em hora).
+   O script `scripts/vercel-env.sh` faz tudo isso a partir do `.env.local`.
+4. Faça um novo deploy.
 
 ## Conteúdo
 

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { api } from './lib/api.js';
-import { ProgressProvider, useProgress } from './lib/store.jsx';
-import { units, lessonById } from './data/index.js';
+import { ProgressProvider, useProgress, useStudyClock } from './lib/store.jsx';
+import { units, lessons, lessonById } from './data/index.js';
 import { dueCards } from './lib/progress.js';
 import { Path } from './components/Path.jsx';
 import { LessonIntro, LessonPlayer } from './components/Lesson.jsx';
 import { ReviewHome, ReviewSession } from './components/Review.jsx';
 import { ReadingList, ReadingPlayer } from './components/Readings.jsx';
 import { Profile } from './components/Profile.jsx';
-import { StatsBar, Toasts } from './components/ui.jsx';
+import { DailyCard, StatsBar, Toasts } from './components/ui.jsx';
 
 export default function App() {
   const [user, setUser] = useState(undefined);
@@ -73,6 +73,8 @@ function Main({ onLogout }) {
   const [tab, setTab] = useState('path');
   const [view, setView] = useState(null); // { kind, id }
   const due = dueCards(progress).length;
+  useStudyClock(Boolean(view));
+  const nextLesson = lessons.find((l) => !l.review && !progress.lessons[l.id]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -115,7 +117,12 @@ function Main({ onLogout }) {
             <StatsBar />
           </header>
           <main className="app-main">
-            {tab === 'path' && <Path onOpen={(id) => setView({ kind: 'intro', id })} />}
+            {tab === 'path' && (
+              <>
+                <DailyCard onStart={() => (nextLesson ? setView({ kind: 'intro', id: nextLesson.id }) : due ? setView({ kind: 'review' }) : setTab('reading'))} />
+                <Path onOpen={(id) => setView({ kind: 'intro', id })} />
+              </>
+            )}
             {tab === 'review' && <ReviewHome onStart={() => setView({ kind: 'review' })} />}
             {tab === 'reading' && <ReadingList onOpen={(id) => setView({ kind: 'reading', id })} />}
             {tab === 'profile' && <Profile onLogout={onLogout} />}

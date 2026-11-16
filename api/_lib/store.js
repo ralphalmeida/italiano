@@ -32,3 +32,8 @@ export async function save(key, value) {
   if (!config()) return void memory.set(key, value);
   await redis(['SET', key, JSON.stringify(value)]);
 }
+
+export async function remove(key) {
+  if (!config()) return void memory.delete(key);
+  await redis(['DEL', key]);
+}

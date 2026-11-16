@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from './api.js';
-import { checkAchievements, emptyProgress, merge, migrateSteps } from './progress.js';
+import { addStudyTime, checkAchievements, emptyProgress, goalMet, merge, migrateSteps } from './progress.js';
 import { lessons, readings } from '../data/index.js';
 import { sfx } from './sfx.js';
 
@@ -81,3 +81,41 @@ export function ProgressProvider({ email, children }) {
 }
 
 export const useProgress = () => useContext(Ctx);
+
+// Conta o tempo de estudo enquanto uma tela de estudo está aberta, a aba está visível
+// e houve interação no último minuto e meio. Grava a cada 15 s e ao sair.
+export function useStudyClock(active) {
+  const { update, toast } = useProgress();
+  useEffect(() => {
+    if (!active) return undefined;
+    let lastTouch = Date.now();
+    let pending = 0;
+    const touch = () => {
+      lastTouch = Date.now();
+    };
+    const flush = () => {
+      if (!pending) return;
+      const secs = pending;
+      pending = 0;
+      update((p) => {
+        const next = addStudyTime(p, secs);
+        if (!goalMet(p) && goalMet(next)) setTimeout(() => toast({ icon: '🎯', title: 'Meta de hoje cumprida!', text: `+1 dia na sequência 🔥` }));
+        return next;
+      });
+    };
+    const tick = setInterval(() => {
+      if (document.visibilityState === 'visible' && Date.now() - lastTouch < 90000) pending += 1;
+      if (pending >= 15) flush();
+    }, 1000);
+    const onVisibility = () => document.visibilityState === 'hidden' && flush();
+    const events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(tick);
+      flush();
+      events.forEach((e) => window.removeEventListener(e, touch));
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [active, update, toast]);
+}

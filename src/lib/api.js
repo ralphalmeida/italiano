@@ -15,4 +15,8 @@ export const api = {
   logout: () => call('/api/session', { method: 'DELETE' }),
   getProgress: () => call('/api/progress'),
   putProgress: (progress) => call('/api/progress', { method: 'PUT', body: JSON.stringify({ progress }) }),
+  pushStatus: () => call('/api/push'),
+  pushEnable: (subscription, hour, tz) => call('/api/push', { method: 'POST', body: JSON.stringify({ subscription, hour, tz }) }),
+  pushDisable: () => call('/api/push', { method: 'DELETE' }),
+  pushTest: () => call('/api/push?test=1', { method: 'POST' }),
 };

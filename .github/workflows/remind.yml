@@ -1,0 +1,13 @@
+# Dispara os lembretes diários: de hora em hora chama /api/remind,
+# que decide quem deve receber a notificação (horário escolhido + meta não cumprida).
+name: Lembretes diários
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://italiano-ochre.vercel.app/api/remind

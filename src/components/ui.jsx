@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useProgress } from '../lib/store.jsx';
-import { currentStreak, dueCards, levelInfo, today } from '../lib/progress.js';
+import { currentStreak, dueCards, goalSeconds, levelInfo, today, todaySeconds } from '../lib/progress.js';
 
 export function Confetti() {
   const pieces = useMemo(
@@ -41,16 +41,16 @@ export function StatsBar() {
   const { progress } = useProgress();
   const streak = currentStreak(progress);
   const lvl = levelInfo(progress.xp);
-  const todayXp = progress.daily[today()] || 0;
-  const goal = progress.settings.dailyGoal;
+  const done = todaySeconds(progress);
+  const goal = goalSeconds(progress);
   const due = dueCards(progress).length;
   return (
     <div className="statsbar">
       <div className={`chip ${progress.streak.last === today() ? 'chip-fire' : ''}`} title="Dias seguidos">🔥 {streak}</div>
       <div className="chip" title="Revisões pendentes">🧠 {due}</div>
       <div className="chip" title={`Nível ${lvl.level}`}>⚡ {progress.xp}</div>
-      <div className="goal" title={`Meta diária: ${todayXp}/${goal} XP`}>
-        <Ring pct={Math.min(1, todayXp / goal)} />
+      <div className="goal" title={`Meta de hoje: ${Math.floor(done / 60)} de ${goal / 60} min`}>
+        <Ring pct={Math.min(1, done / goal)} />
       </div>
     </div>
   );
@@ -79,4 +79,42 @@ export function SyncBadge() {
   };
   const [icon, text] = map[sync];
   return <span className={`sync sync-${sync}`} title={text}>{icon} {text}</span>;
+}
+
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+// Cartão da meta diária no topo da trilha.
+export function DailyCard({ onStart }) {
+  const { progress } = useProgress();
+  const done = todaySeconds(progress);
+  const goal = goalSeconds(progress);
+  const streak = currentStreak(progress);
+  const met = done >= goal;
+  const left = Math.max(0, goal - done);
+  const hour = new Date().getHours();
+  const atRisk = !met && streak > 0 && hour >= 18;
+  return (
+    <div className={`card daily ${met ? 'daily-met' : atRisk ? 'daily-risk' : ''}`}>
+      <div className="daily-top">
+        <div>
+          <span className="eyebrow">Meta de hoje · {goal / 60} min</span>
+          <h3>
+            {met
+              ? 'Meta cumprida! Bravissimo 🎉'
+              : atRisk
+                ? `🔥 Sua sequência de ${streak} ${streak === 1 ? 'dia' : 'dias'} está em risco!`
+                : done > 0
+                  ? `Faltam ${Math.ceil(left / 60)} min para a meta`
+                  : `${goal / 60} minutinhos de italiano hoje?`}
+          </h3>
+        </div>
+        <div className="daily-time">{mmss(Math.min(done, goal))}<small>/{goal / 60}:00</small></div>
+      </div>
+      <div className="bar"><div className="bar-fill" style={{ width: `${Math.min(100, (done / goal) * 100)}%` }} /></div>
+      {!met && onStart && (
+        <button className="btn btn-primary btn-block" onClick={onStart}>{done > 0 ? 'Continuar estudando' : 'Começar agora'}</button>
+      )}
+      {met && <p className="muted small">Sequência garantida. Quer continuar? Cada minuto a mais ajuda na prova.</p>}
+    </div>
+  );
 }

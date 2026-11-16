@@ -17,6 +17,7 @@ export function emptyProgress() {
     updatedAt: 0,
     xp: 0,
     daily: {},
+    seconds: {}, // tempo de estudo por dia (segundos)
     streak: { count: 0, last: null, best: 0 },
     lessons: {},
     readings: {},
@@ -24,7 +25,7 @@ export function emptyProgress() {
     reviews: 0,
     perfect: 0,
     achievements: {},
-    settings: { dailyGoal: 50, sound: true, unlockAll: false },
+    settings: { dailyGoal: 50, dailyMinutes: 5, sound: true, unlockAll: false },
   };
 }
 
@@ -66,12 +67,19 @@ function touchStreak(p) {
 
 export function addXp(p, amount) {
   const t = today();
-  return {
-    ...p,
-    xp: p.xp + amount,
-    daily: { ...p.daily, [t]: (p.daily[t] || 0) + amount },
-    streak: touchStreak(p),
-  };
+  return { ...p, xp: p.xp + amount, daily: { ...p.daily, [t]: (p.daily[t] || 0) + amount } };
+}
+
+// ---------- Meta diária em minutos ----------
+export const goalSeconds = (p) => (p.settings.dailyMinutes || 5) * 60;
+export const todaySeconds = (p) => (p.seconds || {})[today()] || 0;
+export const goalMet = (p) => todaySeconds(p) >= goalSeconds(p);
+
+// Soma tempo de estudo; a sequência de dias só avança quando a meta do dia é cumprida.
+export function addStudyTime(p, secs) {
+  const t = today();
+  const next = { ...p, seconds: { ...p.seconds, [t]: todaySeconds(p) + secs } };
+  return goalMet(next) && p.streak.last !== t ? { ...next, streak: touchStreak(p) } : next;
 }
 
 // ---------- Revisão espaçada (Leitner) ----------
@@ -150,6 +158,7 @@ export const ACHIEVEMENTS = [
   { id: 'review', icon: '🏆', name: 'Ripasso', desc: 'Conclua uma revisão de unidade', test: (p) => Object.keys(p.lessons).some((id) => id.endsWith('rev')) },
   { id: 'perfect', icon: '💯', name: 'Perfetto!', desc: 'Faça uma lição sem errar', test: (p) => p.perfect >= 1 },
   { id: 'stars', icon: '⭐', name: 'Collezionista', desc: 'Junte 30 estrelas', test: (p) => Object.values(p.lessons).reduce((s, l) => s + l.stars, 0) >= 30 },
+  { id: 'goal1', icon: '⏱️', name: 'Costanza', desc: 'Cumpra a meta de minutos de um dia', test: (p) => Object.values(p.seconds || {}).some((v) => v >= goalSeconds(p)) },
   { id: 's3', icon: '🔥', name: 'Tre giorni', desc: 'Sequência de 3 dias', test: (p) => (p.streak.best || 0) >= 3 },
   { id: 's7', icon: '🚀', name: 'Una settimana', desc: 'Sequência de 7 dias', test: (p) => (p.streak.best || 0) >= 7 },
   { id: 's30', icon: '👑', name: 'Un mese', desc: 'Sequência de 30 dias', test: (p) => (p.streak.best || 0) >= 30 },
@@ -192,6 +201,8 @@ export function merge(a, b) {
   out.perfect = Math.max(a.perfect || 0, b.perfect || 0);
   out.daily = { ...a.daily };
   for (const [d, v] of Object.entries(b.daily || {})) out.daily[d] = Math.max(out.daily[d] || 0, v);
+  out.seconds = { ...a.seconds };
+  for (const [d, v] of Object.entries(b.seconds || {})) out.seconds[d] = Math.max(out.seconds[d] || 0, v);
   const sa = a.streak || {};
   const sb = b.streak || {};
   out.streak = (sa.last || '') >= (sb.last || '') ? { ...sa } : { ...sb };

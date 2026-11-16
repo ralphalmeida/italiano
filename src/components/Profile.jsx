@@ -2,6 +2,7 @@ import { useProgress } from '../lib/store.jsx';
 import { ACHIEVEMENTS, currentStreak, levelInfo, masteredCount, today } from '../lib/progress.js';
 import { lessons } from '../data/index.js';
 import { SyncBadge } from './ui.jsx';
+import { Reminder } from './Reminder.jsx';
 
 function lastDays(n) {
   return Array.from({ length: n }, (_, i) => {
@@ -15,7 +16,9 @@ export function Profile({ onLogout }) {
   const { progress, update, email } = useProgress();
   const lvl = levelInfo(progress.xp);
   const days = lastDays(7);
-  const max = Math.max(progress.settings.dailyGoal, ...days.map((d) => progress.daily[d.key] || 0));
+  const goalMin = progress.settings.dailyMinutes || 5;
+  const minutes = (key) => Math.floor(((progress.seconds || {})[key] || 0) / 60);
+  const max = Math.max(goalMin, ...days.map((d) => minutes(d.key)));
   const stars = Object.values(progress.lessons).reduce((s, l) => s + l.stars, 0);
   const core = lessons.filter((l) => !l.review);
   const coreDone = core.filter((l) => progress.lessons[l.id]).length;
@@ -44,16 +47,17 @@ export function Profile({ onLogout }) {
         <h3>Últimos 7 dias</h3>
         <div className="week">
           {days.map((d) => {
-            const v = progress.daily[d.key] || 0;
+            const v = minutes(d.key);
             return (
-              <div key={d.key} className="week-col">
-                <div className="week-bar"><div className={v >= progress.settings.dailyGoal ? 'met' : ''} style={{ height: `${(v / max) * 100}%` }} /></div>
+              <div key={d.key} className="week-col" title={`${v} min`}>
+                <small className="week-val">{v || ''}</small>
+                <div className="week-bar"><div className={v >= goalMin ? 'met' : ''} style={{ height: `${(v / max) * 100}%` }} /></div>
                 <span>{d.label}</span>
               </div>
             );
           })}
         </div>
-        <p className="muted small">Meta diária: {progress.settings.dailyGoal} XP</p>
+        <p className="muted small">Minutos de estudo por dia · meta: {goalMin} min (barra dourada = meta cumprida)</p>
       </div>
 
       <div className="card">
@@ -72,14 +76,16 @@ export function Profile({ onLogout }) {
       <div className="card settings">
         <h3>Configurações</h3>
         <label className="setting">
-          <span>Meta diária</span>
-          <select value={progress.settings.dailyGoal} onChange={(e) => setSetting('dailyGoal', Number(e.target.value))}>
-            <option value={30}>Leve · 30 XP</option>
-            <option value={50}>Normal · 50 XP</option>
-            <option value={100}>Séria · 100 XP</option>
-            <option value={200}>Intensa · 200 XP</option>
+          <span>Meta diária<small>a sequência 🔥 só conta com a meta cumprida</small></span>
+          <select value={goalMin} onChange={(e) => setSetting('dailyMinutes', Number(e.target.value))}>
+            <option value={3}>Leve · 3 min</option>
+            <option value={5}>Normal · 5 min</option>
+            <option value={10}>Séria · 10 min</option>
+            <option value={15}>Intensa · 15 min</option>
+            <option value={20}>Maratona · 20 min</option>
           </select>
         </label>
+        <Reminder />
         <label className="setting">
           <span>Efeitos sonoros</span>
           <input type="checkbox" checked={progress.settings.sound} onChange={(e) => setSetting('sound', e.target.checked)} />

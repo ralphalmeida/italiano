@@ -22,6 +22,9 @@ class ErrorBoundary extends Component {
   }
 }
 
+// service worker: necessário para os lembretes por notificação
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+
 createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
     <App />
