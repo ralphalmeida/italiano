@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { units, lessons } from '../data/index.js';
 import { useProgress } from '../lib/store.jsx';
 import { isUnlocked } from '../lib/progress.js';
@@ -24,27 +25,31 @@ export function Path({ onOpen }) {
             </header>
             <div className="nodes">
               {u.lessons.map((l) => {
+                const groupHead = l.step?.key === 'vocab' ? <div className="lesson-group"><span>{l.lessonTitle}</span></div> : null;
                 const idx = order.findIndex((x) => x.id === l.id);
                 const unlocked = isUnlocked(progress, order, idx);
                 const rec = progress.lessons[l.id];
                 const current = idx === nextIndex;
                 const offset = [0, 1, 0, -1][idx % 4];
                 return (
-                  <div key={l.id} className="node-wrap" style={{ transform: `translateX(${offset * 52}px)` }}>
+                  <Fragment key={l.id}>
+                  {groupHead}
+                  <div className="node-wrap" style={{ transform: `translateX(${offset * 52}px)` }}>
                     {current && <div className="node-start">COMEÇAR</div>}
                     <button
-                      className={`node ${l.review ? 'review' : ''} ${rec ? 'done' : ''} ${current ? 'current' : ''} ${unlocked ? '' : 'locked'}`}
+                      className={`node ${l.step ? 'step' : ''} ${l.review ? 'review' : ''} ${rec ? 'done' : ''} ${current ? 'current' : ''} ${unlocked ? '' : 'locked'}`}
                       disabled={!unlocked}
                       onClick={() => onOpen(l.id)}
                       aria-label={l.title}
                     >
-                      {!unlocked ? '🔒' : l.review ? '🏆' : rec ? '✓' : '★'}
+                      {!unlocked ? '🔒' : l.review ? '🏆' : rec ? '✓' : l.step.icon}
                     </button>
                     <div className="node-label">
-                      {l.title}
+                      {l.review ? l.title : l.step.label}
                       {rec && <span className="node-stars">{'★'.repeat(rec.stars)}{'☆'.repeat(3 - rec.stars)}</span>}
                     </div>
                   </div>
+                  </Fragment>
                 );
               })}
             </div>

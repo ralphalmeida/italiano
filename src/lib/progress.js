@@ -170,6 +170,17 @@ export function checkAchievements(p, ctx) {
   return [{ ...p, achievements }, fresh];
 }
 
+// Lições feitas antes da divisão em etapas (ex.: "u1l1") contam como as 3 etapas concluídas.
+export function migrateSteps(p) {
+  if (!p?.lessons) return p;
+  let lessons = null;
+  for (const [id, rec] of Object.entries(p.lessons)) {
+    if (!/^u\d+l\d+$/.test(id)) continue;
+    for (const s of ['a', 'b', 'c']) if (!p.lessons[id + s]) (lessons ||= { ...p.lessons })[id + s] = rec;
+  }
+  return lessons ? { ...p, lessons } : p;
+}
+
 // ---------- Sincronização: mescla dois estados sem perder progresso ----------
 export function merge(a, b) {
   if (!a) return b;

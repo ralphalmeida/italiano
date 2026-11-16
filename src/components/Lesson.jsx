@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Exercise, TYPE_LABEL, buildSession, canCheck, evaluate } from './Exercises.jsx';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Exercise, TYPE_LABEL, buildSession, canCheck, evaluate, hintFor } from './Exercises.jsx';
 import { useProgress } from '../lib/store.jsx';
-import { addXp, completeLesson, starsFor } from '../lib/progress.js';
+import { addCards, addXp, completeLesson, starsFor } from '../lib/progress.js';
 import { richParts } from '../lib/text.js';
 import { sfx } from '../lib/sfx.js';
 import { Confetti } from './ui.jsx';
@@ -35,6 +35,8 @@ export function Theory({ blocks }) {
   });
 }
 
+const STEP_N = { vocab: 1, learn: 2, practice: 3 };
+
 export function LessonIntro({ lesson, unit, onStart, onBack }) {
   return (
     <div className="screen">
@@ -43,10 +45,16 @@ export function LessonIntro({ lesson, unit, onStart, onBack }) {
         <div className="topbar-title">{unit.emoji} {unit.title}</div>
       </header>
       <article className="card theory">
-        <span className="eyebrow">{lesson.review ? 'Revisão da unidade' : 'Lição'}</span>
-        <h1>{lesson.title}</h1>
+        <span className="eyebrow">{lesson.review ? 'Revisão da unidade' : `${lesson.step.icon} Etapa ${STEP_N[lesson.step.key]} de 3 · ${lesson.step.label}`}</span>
+        <h1>{lesson.review ? lesson.title : lesson.lessonTitle}</h1>
         <Theory blocks={lesson.theory} />
-        {!lesson.review && lesson.vocab?.length > 0 && (
+        {lesson.recap && (
+          <details className="recap">
+            <summary>📘 Rever a explicação</summary>
+            <Theory blocks={lesson.recap} />
+          </details>
+        )}
+        {lesson.step?.key === 'vocab' && (
           <>
             <h2>Vocabulário</h2>
             <ul className="vocab-list">
@@ -54,7 +62,7 @@ export function LessonIntro({ lesson, unit, onStart, onBack }) {
                 <li key={it}><span className="it">{it}</span><span className="pt">{pt}</span></li>
               ))}
             </ul>
-            <p className="muted small">Essas palavras vão para a sua revisão espaçada ao concluir a lição.</p>
+            <p className="muted small">Essas palavras vão para a sua revisão espaçada ao concluir esta etapa.</p>
           </>
         )}
       </article>
@@ -67,7 +75,10 @@ export function LessonIntro({ lesson, unit, onStart, onBack }) {
 
 export function LessonPlayer({ lesson, onExit }) {
   const { update } = useProgress();
-  const [queue, setQueue] = useState(() => buildSession(lesson).map((ex, i) => ({ ex, key: i, retry: false })));
+  const [queue, setQueue] = useState(() => buildSession(lesson).map((ex, i) => ({ ex, key: i, base: i, retry: false })));
+  const [fails, setFails] = useState({}); // erros por questão (base)
+  const [askedHint, setAskedHint] = useState(0); // dicas pedidas na tentativa atual
+  const [hard, setHard] = useState([]); // frases que foram para a Revisão
   const [total] = useState(queue.length);
   const [pos, setPos] = useState(0);
   const [value, setValue] = useState(null);
@@ -78,6 +89,12 @@ export function LessonPlayer({ lesson, onExit }) {
 
   const item = queue[pos];
   const solved = pos - queue.slice(0, pos).filter((q) => q.retry).length;
+  const failCount = item ? fails[item.base] || 0 : 0;
+  // múltipla escolha sem regra escrita só tem um nível de dica (tirar alternativas)
+  const maxHint = !item || item.ex.type === 'match' ? 0 : item.ex.type === 'vocab' || (item.ex.type === 'mc' && !item.ex.explain) ? 1 : 2;
+  const hintLevel = Math.min(maxHint, failCount + askedHint);
+  const hint = useMemo(() => (item ? hintFor(item.ex, hintLevel) : null), [item?.key, hintLevel]); // eslint-disable-line
+  const canAskHint = hintLevel < maxHint;
 
   const submit = useCallback(() => {
     if (result) return next();
@@ -89,19 +106,28 @@ export function LessonPlayer({ lesson, onExit }) {
       sfx.correct();
       setStats((s) => {
         const combo = s.combo + 1;
-        const gain = (item.retry ? 5 : 10) + (combo >= 5 ? 5 : combo >= 3 ? 2 : 0);
+        const gain = (item.retry || hintLevel > 0 ? 5 : 10) + (combo >= 5 ? 5 : combo >= 3 ? 2 : 0);
         return { ...s, first: s.first + (item.retry ? 0 : 1), xp: s.xp + gain, combo, bestCombo: Math.max(s.bestCombo, combo) };
       });
     } else {
       sfx.wrong();
+      const n = failCount + 1;
+      setFails((f) => ({ ...f, [item.base]: n }));
       setStats((s) => ({ ...s, wrong: s.wrong + 1, combo: 0 }));
-      setQueue((q) => [...q, { ...item, key: `${item.key}r${q.length}`, retry: true }]);
+      // até 3 tentativas; depois a frase vai para a Revisão em vez de voltar de novo
+      if (n < 3) setQueue((q) => [...q, { ...item, key: `${item.key}r${q.length}`, retry: true }]);
+      else {
+        r.parked = true;
+        const card = cardFor(item.ex);
+        if (card) setHard((h) => [...h, card]);
+      }
     }
-  }, [result, item, value]);
+  }, [result, item, value, failCount, hintLevel]);
 
   function next() {
     setResult(null);
     setValue(null);
+    setAskedHint(0);
     if (pos + 1 >= queue.length) return finish();
     setPos(pos + 1);
   }
@@ -110,7 +136,7 @@ export function LessonPlayer({ lesson, onExit }) {
     const accuracy = stats.first / total;
     const bonus = 20 + (accuracy === 1 ? 10 : 0);
     const xp = stats.xp + bonus;
-    update((p) => completeLesson(addXp(p, xp), lesson, accuracy));
+    update((p) => addCards(completeLesson(addXp(p, xp), lesson, accuracy), hard, lesson.id));
     sfx.finish();
     setFinished({ accuracy, xp, stars: starsFor(accuracy), bonus });
   }
@@ -137,8 +163,12 @@ export function LessonPlayer({ lesson, onExit }) {
       </header>
 
       <main className="player-body" key={item.key}>
-        <span className="eyebrow">{item.retry ? '🔁 Tente de novo · ' : ''}{TYPE_LABEL[item.ex.type]}</span>
-        <Exercise ex={item.ex} value={value} onChange={setValue} locked={Boolean(result)} onSubmit={submit} />
+        <span className="eyebrow">{item.retry ? `🔁 Tentativa ${failCount + 1} de 3 · ` : ''}{TYPE_LABEL[item.ex.reverse ? 'vocabRev' : item.ex.type]}</span>
+        <Exercise ex={item.ex} value={value} onChange={setValue} locked={Boolean(result)} onSubmit={submit} hint={result ? null : hint} />
+        {!result && hint && <div className="hint-box">💡 {hint.text}</div>}
+        {!result && canAskHint && (
+          <button className="hint-btn" onClick={() => setAskedHint((h) => h + 1)}>💡 {hintLevel === 0 ? 'Quero uma dica' : 'Mais uma dica'}</button>
+        )}
       </main>
 
       <footer className={`check-bar ${result ? (result.ok ? 'ok' : 'ko') : ''}`}>
@@ -148,6 +178,7 @@ export function LessonPlayer({ lesson, onExit }) {
             {!result.ok && result.solution && <p>Resposta: <b>{result.solution}</b></p>}
             {result.note && <p>{result.note}</p>}
             {item.ex.explain && (!result.ok || result.note) && <p className="muted-on">{item.ex.explain}</p>}
+            {result.parked && <p className="muted-on">🧠 {cardFor(item.ex) ? 'Essa frase foi para a sua Revisão para você treinar com calma.' : 'Vamos seguir — ela volta na próxima vez.'}</p>}
           </div>
         )}
         {item.ex.type !== 'match' || result ? (
@@ -174,6 +205,14 @@ export function LessonPlayer({ lesson, onExit }) {
 }
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+// Vira flashcard [italiano, português] quando a questão é errada 3 vezes.
+function cardFor(ex) {
+  if (ex.type === 'order') return [ex.answer, ex.pt];
+  if (ex.type === 'translate') return [ex.answer[0], ex.pt];
+  if (ex.type === 'fill') return [ex.prompt.replace('___', ex.answer[0]), ex.explain || ex.hint || 'complete a frase'];
+  return null;
+}
 
 function Results({ lesson, accuracy, xp, stars, combo, onDone }) {
   return (

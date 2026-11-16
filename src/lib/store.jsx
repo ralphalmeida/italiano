@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from './api.js';
-import { checkAchievements, emptyProgress, merge } from './progress.js';
+import { checkAchievements, emptyProgress, merge, migrateSteps } from './progress.js';
 import { lessons, readings } from '../data/index.js';
 import { sfx } from './sfx.js';
 
@@ -26,7 +26,7 @@ function writeLocal(email, p) {
 }
 
 export function ProgressProvider({ email, children }) {
-  const [progress, setProgress] = useState(() => merge(emptyProgress(), readLocal(email)));
+  const [progress, setProgress] = useState(() => migrateSteps(merge(emptyProgress(), readLocal(email))));
   const [sync, setSync] = useState('loading'); // loading | ok | saving | offline | local
   const [toasts, setToasts] = useState([]);
   const timer = useRef();
@@ -38,7 +38,7 @@ export function ProgressProvider({ email, children }) {
       .getProgress()
       .then(({ progress: remote, store }) => {
         if (!alive) return;
-        setProgress((p) => merge(merge(emptyProgress(), remote), p));
+        setProgress((p) => migrateSteps(merge(merge(emptyProgress(), remote), p)));
         setSync(store === 'redis' ? 'ok' : 'local');
       })
       .catch(() => alive && setSync('offline'))
